@@ -43,24 +43,7 @@ public class Qualification {
      * Performs the qualification procedure as described by RFC 4380.
      */
     public void run() throws QualificationTimeoutException {
-        cone = true;
-        boolean connected = false;
-        while (!connected) {
-            try {
-                int attempt = 0;
-                do {
-                    if (++attempt > MAX_ATTEMPTS)
-                        throw new QualificationTimeoutException ("No response within configured retry number");
-                    doStartAction();
-                } while (!waitForRouterAdvertisement());
-                connected = true;
-            } catch (QualificationTimeoutException e) {
-                if (cone)
-                    cone = false;
-                else
-                    throw e;
-            }
-        }
+        connectToServer();
 
         /*
            If the client has received an RA with the cone bit in the IPv6
@@ -88,6 +71,18 @@ public class Qualification {
          */
     }
 
+    private void connectToServer() throws QualificationTimeoutException {
+        cone = false; // see Teredo security enhancement RFC 5xxx
+        boolean connected = false;
+        int attempt = 0;
+        do {
+            if (++attempt > MAX_ATTEMPTS)
+                throw new QualificationTimeoutException ("No response within configured retry number");
+            doStartAction();
+        } while (!receiveRouterAdvertisement());
+        connected = true;
+    }
+
     private void checkRouterResponse() {
         /*
            If a response arrives, the client checks that the response contains
@@ -107,7 +102,7 @@ public class Qualification {
          */
     }
 
-    private boolean waitForRouterAdvertisement() {
+    private boolean receiveRouterAdvertisement() {
         /*
         In the starting state, the client waits for a router advertisement
    from the Teredo server.
